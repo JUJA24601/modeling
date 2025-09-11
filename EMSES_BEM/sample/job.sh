@@ -1,6 +1,6 @@
 #!/bin/bash
 #============ Slurm Options ===========
-#SBATCH -p gr20001a
+#SBATCH -p gr10451a
 #SBATCH -t 72:00:00
 #SBATCH --rsc p=114:t=1:c=4:m=4280M
 #SBATCH -o %x.%j.out

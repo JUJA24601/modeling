@@ -691,7 +691,7 @@
                                 end do
 
                                 ! 電位確認用
-                                if (mod(istep,1000)==0) then
+                                if (mod(istep,10000)==0) then
                                   do i_bem = 1,2
                                     do x_tick = 0, nx
                                       do y_tick = 0, ny

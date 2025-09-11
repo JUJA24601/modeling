@@ -20,8 +20,8 @@ program worker
     real(kind=8) :: v111, v112, v121, v122, v211, v212, v221, v222, v
     integer, parameter :: out_unit=20
 
-    real(kind=8) :: potential_snap(10000) = 0
-    real(kind=8) :: charge_snap(10000) = 0 
+    real(kind=8) :: potential_snap(100000) = 0
+    real(kind=8) :: charge_snap(100000) = 0 
 
     integer t1, t2, t_rate, t_max, diff
 
@@ -31,6 +31,7 @@ program worker
                     apex4_x, apex4_y, apex4_z, a_temp, b_temp, p0_x, p0_y, p0_z, n1_x, n1_y, n1_z, n2_x, n2_y, n2_z, n3_x, n3_y, n3_z
     double precision potential_conductor, Q, C, pi, eps0, E0(3)
     character(len=100) file_triangle, file_rectangle
+    character(len=100) path_triangle, path_rectangle
     logical triangle_exists, rectangle_exists
 
     ! type of rectangle
@@ -52,13 +53,25 @@ program worker
     double precision, allocatable :: sigmas(:)
     double precision, allocatable :: coef(:,:,:,:)
 
-    ! ここで境界要素法プログラムを実行する
     pi = acos(-1.0d0)
-    eps0 = 1.0d0    ! 8.8541878128d-12     ! permittivity
+    eps0 = 1.0d0    ! permittivity
 
-    ! ファイル名
-    file_triangle = "./data_triangle.csv"
-    file_rectangle = "./data_rectangle.csv"
+    namelist /files_BEM/ file_triangle, file_rectangle
+    open(unit=10, file="bem.inp", status="old", action="read")
+    read(10, nml=files_BEM)
+    close(10)
+
+    ! 読み込んだ値を確認
+    print *, "Triangle file =", trim(file_triangle)
+    print *, "Rectangle file =", trim(file_rectangle)
+
+    ! file_triangle = "./data_triangle.csv" <-- これは後で消す
+    path_triangle = "./" // trim(file_triangle)
+    ! file_rectangle = "./data_rectangle.csv" <-- これは後で消す
+    path_rectangle = "./" // trim(file_rectangle)
+
+    print *, "Triangle path =", path_triangle
+    print *, "Rectangle path =", path_rectangle
     
     inquire(file=file_triangle, exist=triangle_exists)
     inquire(file=file_rectangle, exist=rectangle_exists)
