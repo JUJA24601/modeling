@@ -205,7 +205,7 @@
  1400 t=a(n,n)
       if(t.eq.0.0d0.or.dabs(t).lt.dabs(og*eps).or. &
      &   (og.eq.0.0d0.and.dabs(t).le.(ogmax*eps))) go to 20
- 8000 if(icon.ne.0) print*, "ERROR@DALU: icon =", icon
+ 8000 continue ! if(icon.ne.0) print*, "ERROR@DALU: icon =", icon
 
     return
   end subroutine dalu
@@ -444,7 +444,7 @@
 !    ------------------------------------------------------------------
 !
 !    ------------------------------------------------------------------
- 8000 if(icon.ne.0) print*, "ERROR@DLUIV: icon =", icon
+ 8000 continue ! if(icon.ne.0) print*, "ERROR@DLUIV: icon =", icon
     return
 !
  9000 icon=20000
@@ -663,7 +663,7 @@
    30   continue
       endif
 !
-  999 if(icon.ne.0) print*, "ERROR@DMAV: icon =", icon
+  999 continue ! if(icon.ne.0) print*, "ERROR@DMAV: icon =", icon
 !
     return
   end subroutine dmav

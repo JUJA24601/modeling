@@ -61,35 +61,30 @@ program worker
     read(10, nml=files_BEM)
     close(10)
 
-    ! 読み込んだ値を確認
-    print *, "Triangle file =", trim(file_triangle)
-    print *, "Rectangle file =", trim(file_rectangle)
-
-    ! file_triangle = "./data_triangle.csv" <-- これは後で消す
     path_triangle = "./" // trim(file_triangle)
-    ! file_rectangle = "./data_rectangle.csv" <-- これは後で消す
     path_rectangle = "./" // trim(file_rectangle)
-
-    print *, "Triangle path =", path_triangle
-    print *, "Rectangle path =", path_rectangle
     
     inquire(file=file_triangle, exist=triangle_exists)
     inquire(file=file_rectangle, exist=rectangle_exists)
 
+    open(unit=24601, file="output.txt", status="replace", action="write")
+
     if (triangle_exists) then
         call read_triangle(file_triangle)
+        write(24601,*), "num_of_triangles =", num_of_triangles
     else
-        print *, "no triangle"
+        write(24601,*), "no triangle"
     end if
 
     if (rectangle_exists) then
         call read_rectangle(file_rectangle)
+        write(24601,*), "num_of_rectangles =", num_of_rectangles
     else
-        print *, "no rectangle"
+        write(24601,*), "no rectangle"
     end if
 
     num_of_faces = num_of_rectangles + num_of_triangles
-    print *, "num_of_faces =", num_of_faces
+    write(24601,*), "num_of_faces =", num_of_faces
 
     allocate(P(num_of_faces, num_of_faces))
     allocate(ipiv(num_of_faces))
@@ -102,7 +97,6 @@ program worker
 
     ! calculate coefficient matrix
     if (num_of_rectangles > 0 .and. num_of_triangles > 0) then  ! 三角形と四角形が両方存在している場合
-        print *, "both rectangles and triangles"
         do i = 1, num_of_faces
             if (i/=num_of_faces) then
                 if (i<=num_of_rectangles) then
@@ -135,7 +129,6 @@ program worker
             end if
         end do
     else if (num_of_triangles == 0) then  ! 四角形のみ存在している場合
-        print *, "rectangles only"
         do i = 1, num_of_faces
             if (i/=num_of_faces) then
                 do j = 1, num_of_faces
@@ -148,7 +141,6 @@ program worker
             end if
         end do
     else ! 三角形のみ存在している場合
-        print *, "triangles only"
         do i = 1, num_of_faces
             if (i /= num_of_faces) then
                 do j = 1, num_of_faces
@@ -163,7 +155,6 @@ program worker
     end if
 
     if (num_of_rectangles > 0 .and. num_of_triangles > 0) then ! 三角形、四角形が存在している場合
-        print *, "both rectangles and triangles"
         do i = 1, num_of_faces
             if (i<=num_of_rectangles) then
                 solution(i) = p_calc_tri(triangles(num_of_triangles), centroid_rectangle(rectangles(i))) &
@@ -174,13 +165,11 @@ program worker
             end if
         end do
     else if (num_of_triangles == 0) then  ! 四角形のみ存在している場合
-        print *, "rectangles only"
         do i = 1, num_of_faces
             solution(i) = p_calc_rect(rectangles(num_of_faces), centroid_rectangle(rectangles(i))) &
                             /(4.0d0*pi*eps0*area_rect(rectangles(num_of_faces)))
         end do
     else ! 三角形のみ存在している場合
-        print *, "triangles only"
         do i = 1, num_of_faces
             solution(i) = p_calc_tri(triangles(num_of_faces), centroid_triangle(triangles(i))) &
                             /(4.0d0*pi*eps0*area_tri(triangles(num_of_faces)))
@@ -192,21 +181,17 @@ program worker
     ! print *, "info of dgetrf:", info
 
     ! 電位の知りたい点を計算する
-    open (unit=24601,file='./check_2.txt' ,action="write",status="replace")
     do i = 1, num_of_faces
         if (i<=num_of_rectangles) then
             coord_bem(i,:) = centroid_rectangle(rectangles(i))
         else
             coord_bem(i,:) = centroid_triangle(triangles(i-num_of_rectangles))
         end if
-        write (24601,*) coord_bem(i,:)
     end do
-    close (24601)
 
     grid_point_rows = 0
     allocate(grid_point(0, 3))
 
-    open (unit=24601,file='./check_bem.txt' ,action="write",status="replace")
     ! 電位の知りたい点が含まる格子点を記録する
     do i = 1, num_of_faces
         x1 = floor(coord_bem(i,1))
@@ -237,26 +222,22 @@ program worker
                     exit
                 end if
             end do
-
             if (.not. is_duplicate) then
-                write (24601,*) new_row
                 call add_row(grid_point, grid_point_rows, 3, new_row)
-                ! print *, grid_point_rows
             end if
         end do
-
     end do
+
+    write(24601,*), "grid_point needed: ", size(grid_point, dim=1)
     close (24601)
-
-    print *, "Shape of grid_point: ", shape(grid_point)
-
 
     call CTCAW_init(0, 1)
     call MPI_Comm_size(CTCA_subcomm, nprocs, ierr)
     call MPI_Comm_rank(CTCA_subcomm, myrank, ierr)
     call MPI_Comm_rank(MPI_COMM_WORLD, world_myrank, ierr)
+    call MPI_Barrier(CTCA_subcomm, ierr)
 
-    if (myrank.eq.0) print *, world_myrank, "worker init done"
+    ! if (myrank.eq.0) print *, world_myrank, "worker init done"
 
     call CTCAW_regarea_real8(areaid(1))
     call CTCAW_regarea_real8(areaid(2))
@@ -274,14 +255,14 @@ program worker
             exit
         end if
 
-        if (myrank == 0) print *, "worker poll req done", fromrank
+        ! if (myrank == 0) print *, "worker poll req done", fromrank
 
         rtowd(1) = -1.0d0
         if (myrank == 0) then
-            print *, "wrk first write start"
+            ! print *, "wrk first write start"
             call CTCAW_writearea_real8(areaid(1), fromrank, 0, grid_point_rows+2, rtowd)
             call CTCAW_writearea_int(areaid(3), fromrank, 0, grid_point_rows*3, grid_point)
-            print *, "wrk first write end"
+            ! print *, "wrk first write end"
         end if
         
         call MPI_Barrier(CTCA_subcomm, ierr)
@@ -377,8 +358,6 @@ program worker
                 potential_conductor = rhs(num_of_faces)
                 potential_snap(istep) = potential_conductor
                 charge_snap(istep) = sum(charge)
-                print *, "potential_conductor", potential_conductor
-                print *, "charge", sum(charge)
 
                 do i = 1, num_of_faces
                     if (i<=num_of_rectangles) then
@@ -460,10 +439,10 @@ program worker
 
         ! end this work
         call CTCAW_complete()
-        if (myrank == 0) print *, world_myrank, "worker complete done"
+        ! if (myrank == 0) print *, world_myrank, "worker complete done"
     end do
 
-    print *, "worker is finalizing..."
+    ! print *, "worker is finalizing..."
     call CTCAW_finalize()
 
 
@@ -502,7 +481,6 @@ contains
         101 continue
         rewind(17)
         allocate(triangles(num_of_triangles))
-        print *, "num_of_triangles =", num_of_triangles
         read (17, '()')
         do i = 1, num_of_triangles
             read (17, *) apex1_x, apex1_y, apex1_z, apex2_x, apex2_y, apex2_z, apex3_x, apex3_y, apex3_z, &
@@ -533,7 +511,6 @@ contains
         100 continue
         rewind(17)
         allocate(rectangles(num_of_rectangles))
-        print *, "num_of_rectangles =", num_of_rectangles
         read (17, '()')
         do i = 1, num_of_rectangles
             read (17, *) apex1_x, apex1_y, apex1_z, apex2_x, apex2_y, apex2_z, apex3_x, apex3_y, apex3_z, &

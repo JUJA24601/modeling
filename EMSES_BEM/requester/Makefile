@@ -86,6 +86,6 @@ $(OHOBJS):%.o:	%.c $(COMMONHDRS) $(OHHDRS)
 		$(CC) $(CFLAGS) -c $< -o $@
 
 clean:;
-		rm *.o; rm *.mod
+		rm *.o; rm *.mod; rm mpiemses3D
 clear:;
 		mv hdf5io.o hdf5io.tmp; rm *.o; rm *.mod; mv hdf5io.tmp hdf5io.o

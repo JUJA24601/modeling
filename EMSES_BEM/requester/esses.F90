@@ -79,8 +79,10 @@
   logical :: rebalance
   
   integer(kind=4) :: area_x, area_y, area_z, grid_id, x_grid, y_grid, z_grid, x_tick, y_tick, z_tick, i_bem, j_bem, k_bem, l_bem
+  integer(kind=4) :: ios, pos
   real(kind=8), allocatable :: phisnap_local(:,:,:), phisnap_root(:,:,:)
   character(len=100) :: filename
+  character(len=200) :: line
 
 !--- MPI Initialize ---
 !              -------------------------------------------------
@@ -161,11 +163,24 @@
                                 end do
                                 
                                 ! print *, grid_point_rows
+                                ! if (myid == 0) then
+                                !   call calc_gridpoint()
+                                ! end if
+                                call MPI_Barrier(MCW, mpierr)
                                 if (myid == 0) then
-                                  call calc_gridpoint()
+                                    open(unit=24601, file="output.txt", status="old", action="read")
+                                    do
+                                        read(24601,'(A)', iostat=ios) line
+                                        if (ios /= 0) exit
+                                        pos = index(line, "grid_point needed:")
+                                        if (pos > 0) then
+                                            read(line(pos+len("grid_point needed:"):), *) grid_point_rows
+                                        end if
+                                    end do
+                                    close(24601)
                                 end if
+
                                 call MPI_Bcast(grid_point_rows, 1, MPI_INTEGER4, 0, MCW, mpierr)
-                                print *, "grid_point_rows: ", grid_point_rows
 
                                 allocate(rtowdat(grid_point_rows+2), source=0.0d0)
                                 allocate(phi_local(grid_point_rows), source=0.0d0)
@@ -183,10 +198,10 @@
 
                                 if (myid == 0) then
                                   print *, "grid_point_rows: ", grid_point_rows
-                                  print *, "requester sendreq : ", myid
+                                  ! print *, "requester sendreq : ", myid
                                   print *, "nstep : ", nstep
                                   call CTCAR_sendreq(dataint, 2)    ! リクエスト送る
-                                  print *, "requester sendreq done"
+                                  ! print *, "requester sendreq done"
                                 end if
 
                                 call MPI_Barrier(MCW, mpierr)
@@ -651,9 +666,9 @@
                 
                                   ! R2  データ書込@Req実⾏
                                   rtowdat(2) = gcount(2)%chgacm(1,1)
-                                  print *, "renq", renq
-                                  print *, "remphi", renphi
-                                  print *, "gcount(2)%chgacm(1,1)_esses", gcount(2)%chgacm(1,1)
+                                  ! print *, "renq", renq
+                                  ! print *, "remphi", renphi
+                                  ! print *, "gcount(2)%chgacm(1,1)_esses", gcount(2)%chgacm(1,1)
                                   rtowdat(3:) = phi_root
                                   rtowdat(1) = istep
                 

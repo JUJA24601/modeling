@@ -269,7 +269,7 @@
           call MPI_Allreduce(wok,sfrho,ncpmx,MPI_REAL8,MPI_SUM,subcomm,ierr)
 !          call MPI_Allreduce(MIP,sfrho,ncpmx,MPI_REAL8,MPI_SUM,subcomm,ierr)
         end if
-        if(icon.ne.0) print*,'[surchg2].WARN01: icon@mav=',icon
+        ! if(icon.ne.0) print*,'[surchg2].WARN01: icon@mav=',icon
 
 
 !-------------------- sum (cpmx*phi)
