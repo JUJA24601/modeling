@@ -200,7 +200,7 @@
                                   print *, "grid_point_rows: ", grid_point_rows
                                   ! print *, "requester sendreq : ", myid
                                   print *, "nstep : ", nstep
-                                  call CTCAR_sendreq(dataint, 2)    ! リクエスト送る
+                                  call CTCAR_sendreq(dataint, 2)
                                   ! print *, "requester sendreq done"
                                 end if
 
@@ -654,17 +654,13 @@
                                 end do
                                 call MPI_Reduce(phi_local, phi_root, grid_point_rows, MPI_REAL8, MPI_SUM, 0, MCW, mpierr)
 
-                                ! 通信
                                 if (myid == 0) then
                                   ! print *, "req-step:", istep
-                
-                                  ! Req → Wrk 情報伝達
-                                  ! R1  データ読込未完了@Wrkチェック
+
                                   do while (.true.)
-                                    if (rtowdat(1) < 0.0d0) exit ! R1C rtowdat(1) 負がデータ読み込み完了
+                                    if (rtowdat(1) < 0.0d0) exit
                                   end do
-                
-                                  ! R2  データ書込@Req実⾏
+
                                   rtowdat(2) = gcount(2)%chgacm(1,1)
                                   ! print *, "renq", renq
                                   ! print *, "remphi", renphi
@@ -672,13 +668,10 @@
                                   rtowdat(3:) = phi_root
                                   rtowdat(1) = istep
                 
-                                  ! Wrk → Req 情報伝達
-                                  ! R3  データ書込@Wrk待ち
                                   do while (.true.)
-                                    if (wtordat(1) >= 0.0d0) exit ! wtordat(1) 正がデータ書込完了
+                                    if (wtordat(1) >= 0.0d0) exit
                                   end do
                                   omegas = wtordat(2:)
-                                  ! R4  データ読込@Req
                                   ! if (istep == 4000) then
                                   !   open (unit=24601,file="./sigma_esses.txt",action="write",status="replace")
                                   !   do i = 1, num_of_faces
@@ -687,7 +680,6 @@
                                   !   close (24601)
                                   ! end if
                                   
-                                  ! R5  データ読込@Req完了フラグ
                                   wtordat(1) = -1.0d0
                 
                                 end if

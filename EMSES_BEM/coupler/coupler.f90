@@ -9,7 +9,7 @@ program coupler
   integer(kind=4) :: world_myrank
   logical :: CTCAC_verbose = .false.
 
-  call CTCAC_init()   ! couplerの初期化
+  call CTCAC_init()   ! coupler
 
   call MPI_Comm_size(CTCA_subcomm, nprocs, ierr)
   call MPI_Comm_rank(CTCA_subcomm, myrank, ierr)
@@ -21,12 +21,10 @@ program coupler
   call CTCAC_regarea_real8(areaid(2))
   call CTCAC_regarea_real8(areaid(3))
 
-  ! メインループ
   do while (.true.)
-    call CTCAC_pollreq(reqinfo, fromrank, dataint, 2) ! リクエスト問い合わせ
+    call CTCAC_pollreq(reqinfo, fromrank, dataint, 2)
     ! print *, "coupler poll req done"
 
-    ! リクエスターでCoToCoA 終了か確認
     if (CTCAC_isfin()) then
       ! print *, "coupler got fin"
       exit
@@ -38,7 +36,7 @@ program coupler
       progid = 0
 
       ! enqueue request with data
-      call CTCAC_enqreq(reqinfo, progid, dataint, 2)  ! リクエストをキューに追加
+      call CTCAC_enqreq(reqinfo, progid, dataint, 2)
       ! if(CTCAC_verbose) print *, "coupler enqreq done"
     end if
   end do

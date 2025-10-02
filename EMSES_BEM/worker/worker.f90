@@ -96,7 +96,7 @@ program worker
     allocate(coef(40,40,30, num_of_faces))
 
     ! calculate coefficient matrix
-    if (num_of_rectangles > 0 .and. num_of_triangles > 0) then  ! 三角形と四角形が両方存在している場合
+    if (num_of_rectangles > 0 .and. num_of_triangles > 0) then
         do i = 1, num_of_faces
             if (i/=num_of_faces) then
                 if (i<=num_of_rectangles) then
@@ -128,7 +128,7 @@ program worker
                 P(:,i) = -1.0d0
             end if
         end do
-    else if (num_of_triangles == 0) then  ! 四角形のみ存在している場合
+    else if (num_of_triangles == 0) then
         do i = 1, num_of_faces
             if (i/=num_of_faces) then
                 do j = 1, num_of_faces
@@ -140,7 +140,7 @@ program worker
                 P(:,i) = -1.0d0
             end if
         end do
-    else ! 三角形のみ存在している場合
+    else
         do i = 1, num_of_faces
             if (i /= num_of_faces) then
                 do j = 1, num_of_faces
@@ -154,7 +154,7 @@ program worker
         end do
     end if
 
-    if (num_of_rectangles > 0 .and. num_of_triangles > 0) then ! 三角形、四角形が存在している場合
+    if (num_of_rectangles > 0 .and. num_of_triangles > 0) then
         do i = 1, num_of_faces
             if (i<=num_of_rectangles) then
                 solution(i) = p_calc_tri(triangles(num_of_triangles), centroid_rectangle(rectangles(i))) &
@@ -164,12 +164,12 @@ program worker
                                 /(4.0d0*pi*eps0*area_tri(triangles(num_of_triangles)))
             end if
         end do
-    else if (num_of_triangles == 0) then  ! 四角形のみ存在している場合
+    else if (num_of_triangles == 0) then
         do i = 1, num_of_faces
             solution(i) = p_calc_rect(rectangles(num_of_faces), centroid_rectangle(rectangles(i))) &
                             /(4.0d0*pi*eps0*area_rect(rectangles(num_of_faces)))
         end do
-    else ! 三角形のみ存在している場合
+    else
         do i = 1, num_of_faces
             solution(i) = p_calc_tri(triangles(num_of_faces), centroid_triangle(triangles(i))) &
                             /(4.0d0*pi*eps0*area_tri(triangles(num_of_faces)))
@@ -178,7 +178,6 @@ program worker
 
     ! LU decompsition
     call dgetrf(num_of_faces, num_of_faces, P, num_of_faces, ipiv, info)
-    ! print *, "info of dgetrf:", info
 
     ! 電位の知りたい点を計算する
     do i = 1, num_of_faces
@@ -270,16 +269,13 @@ program worker
         do istep = 1, nstep
             if (myrank == 0) then
 
-                ! W1  データ書込@Req待ち
                 do while (.true.)
                     call CTCAW_readarea_real8(areaid(1), fromrank, 0, grid_point_rows+2, rtowd)
-                    if (rtowd(1) >= 0.0d0) exit ! W1C  書込@Req完了検出
+                    if (rtowd(1) >= 0.0d0) exit
                 end do
 
-                ! W2  データ読込@Wrk
                 ! print *, "worker got data from req.", rtowd
 
-                ! W3  データ読込@Wrk完了通知
                 rtowd(1) = -1.0d0
                 call CTCAW_writearea_real8(areaid(1), fromrank, 0, grid_point_rows+2, rtowd)
 
@@ -294,9 +290,6 @@ program worker
                 ! print *, "rtowd(2) :", rtowd(2)
                 ! RHS
                 rhs = solution
-                ! if (istep == 4000) then
-                !     open (unit=24601,file="./worker/phi_constraint_point.txt",action="write",status="replace")
-                ! end if
                 do i = 1, num_of_faces
                     x1 = floor(coord_bem(i,1))
                     x2 = ceiling(coord_bem(i,1))
@@ -337,21 +330,13 @@ program worker
                         (coord_bem(i,1)-x1)*(coord_bem(i,2)-y1)*(z2-coord_bem(i,3))*v221 + &
                         (coord_bem(i,1)-x1)*(coord_bem(i,2)-y1)*(coord_bem(i,3)-z1)*v222
 
-                    ! if (istep == 4000) then
-                    !     write (24601, "(3F15.6,1X,E20.10)"), coord_bem(i,1), coord_bem(i,2), coord_bem(i,3), v
-                    ! end if
-
                     ! print *, coord_bem(i,1), coord_bem(i,2), coord_bem(i,3), v
 
                     rhs(i) = -rtowd(2)*rhs(i) - v
                 end do
-                ! if (istep == 4000) then
-                !     close (24601)
-                ! end if
 
                 ! solve linear system
                 call dgetrs("N", num_of_faces, 1, P, num_of_faces, ipiv, rhs, num_of_faces, info)
-                ! print *, "info of dgetrs:", info
 
                 charge = rhs
                 charge(num_of_faces) = rtowd(2) - sum(rhs(1:num_of_faces-1))
@@ -411,13 +396,11 @@ program worker
 
                 ! end if
 
-                ! W4  データ読込未完了@Reqチェック
                 do while (.true.)
                     call CTCAW_readarea_real8(areaid(2), fromrank, 0, 1, wtord)
-                    if (wtord(1) < 0.0d0) exit ! W4C
+                    if (wtord(1) < 0.0d0) exit
                 end do
 
-                ! W5  データ書込@Wrk実⾏
                 wtord(2:) = sigmas
                 wtord(1) = istep
                 call CTCAW_writearea_real8(areaid(2), fromrank, 0, num_of_faces+1, wtord)
@@ -445,8 +428,6 @@ program worker
     ! print *, "worker is finalizing..."
     call CTCAW_finalize()
 
-
-    ! 境界要素法に用いる関数
 contains
 
     subroutine add_row(a, n, c, row)
